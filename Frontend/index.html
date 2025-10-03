@@ -29,28 +29,11 @@
             transition: box-shadow 0.3s ease;
         }
         .particle {
-            position: relative;
             transition: all 0.3s ease;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
             animation: subtle-pulse 4s ease-in-out infinite;
             border: 1px solid rgba(255, 255, 255, 0.2);
             background-image: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
-            overflow: hidden;
-        }
-        .particle::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-            transform: rotate(45deg);
-            animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
         }
         .particle:hover:not(.selected) {
            transform: scale(1.1);
@@ -198,14 +181,7 @@
                          <div class="flex justify-between"><span>TOTAL CHY WEAVED:</span><span id="stat-total-chy" class="text-cyan-400"></span></div>
                          <div class="flex justify-between"><span>ACTIVE NODES:</span><span class="text-cyan-400">7 (Simulated)</span></div>
                          <div class="flex justify-between"><span>AVG. TX TIME:</span><span class="text-cyan-400">0.00 ns</span></div>
-                         <div class="flex justify-between"><span>TOTAL TRANSFERS:</span><span id="stat-transfers" class="text-cyan-400">0</span></div>
-                         <div class="flex justify-between"><span>NETWORK HASH:</span><span id="stat-hash" class="text-cyan-400 text-xs">...</span></div>
                      </div>
-                </div>
-                <!-- Leaderboard -->
-                <div>
-                     <h2 class="text-2xl font-semibold mb-4 border-b border-gray-600 pb-2">Leaderboard</h2>
-                     <div id="leaderboard" class="space-y-2 text-sm"></div>
                 </div>
                 <!-- Transfer Actions -->
                 <div class="bg-black/20 p-4 rounded-lg mt-auto">
@@ -222,13 +198,8 @@
 
             <!-- Middle Panel: Probabilistic State Matrix -->
             <div class="lg:col-span-2 p-6 glass-panel rounded-lg fade-in" style="animation-delay: 0.4s;">
-                <div class="flex justify-between items-start mb-4 border-b border-gray-600 pb-2">
-                    <div>
-                        <h2 class="text-2xl font-semibold">Probabilistic State Matrix (Live)</h2>
-                        <p class="text-sm text-gray-400 mt-1">This represents the live quantum state of all "Corpus" particles in the QEL. Ownership is the present reality, not a historical record.</p>
-                    </div>
-                    <button id="shake-btn" class="px-4 py-2 bg-gradient-to-r from-violet-600 to-blue-600 rounded-lg text-sm font-bold hover:shadow-lg hover:scale-105 transition-all">⚛️ Quantum Shake</button>
-                </div>
+                <h2 class="text-2xl font-semibold mb-4 border-b border-gray-600 pb-2">Probabilistic State Matrix (Live)</h2>
+                <p class="text-sm text-gray-400 mb-6">This represents the live quantum state of all "Corpus" particles in the QEL. Ownership is the present reality, not a historical record.</p>
                 <div id="particle-matrix" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     <!-- Particles will be injected here -->
                 </div>
@@ -389,12 +360,6 @@
         const authStatus = document.getElementById('auth-status');
         const cancelBtn = document.getElementById('cancel-btn');
         const statTotalChy = document.getElementById('stat-total-chy');
-        const statTransfers = document.getElementById('stat-transfers');
-        const statHash = document.getElementById('stat-hash');
-        const leaderboard = document.getElementById('leaderboard');
-
-        let totalTransfers = 0;
-        let networkEntropy = 0;
         
         // --- Sound Engine ---
         let audioCtx;
@@ -636,9 +601,6 @@
                  logBackendEvent(`Entangled Corpus particle state change detected.`, 'text-green-400 font-bold');
                  logBackendEvent(`Updating Probabilistic State Matrix...`);
                  logBackendEvent(`Ownership of <${selectedParticleId}> reassigned to ${recipient.name}.`);
-                 totalTransfers++;
-                 updateNetworkStats();
-                 updateLeaderboard();
             }, 800);
 
             updateStatus(`Success! Ownership instantly transferred.`, false, '#22c55e');
@@ -663,28 +625,6 @@
         
         function updateNetworkStats() {
             statTotalChy.innerText = particles.length;
-            statTransfers.innerText = totalTransfers;
-
-            networkEntropy = particles.reduce((sum, p) => sum + p.id.charCodeAt(p.id.length - 1), 0);
-            const hash = Array.from({length: 6}, (_, i) =>
-                ((networkEntropy * (i + 1) * Date.now()) % 16).toString(16)
-            ).join('');
-            statHash.innerText = hash.toUpperCase();
-        }
-
-        function updateLeaderboard() {
-            const holdings = users.map(user => ({
-                ...user,
-                count: particles.filter(p => p.owner === user.id).length
-            })).sort((a, b) => b.count - a.count);
-
-            leaderboard.innerHTML = holdings.map((user, idx) => {
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-                return `<div class="flex justify-between items-center p-2 bg-black/20 rounded" style="border-left: 3px solid ${user.color}">
-                    <span>${medal} ${user.name}</span>
-                    <span class="font-bold" style="color: ${user.color}">${user.count} CHY</span>
-                </div>`;
-            }).join('');
         }
 
         function weaveNewParticle() {
@@ -696,7 +636,6 @@
             renderParticles();
             renderUsers();
             updateNetworkStats();
-            updateLeaderboard();
         }
 
         transferBtn.onclick = initiateTransfer;
@@ -705,34 +644,15 @@
             authStatus.innerText = '';
         };
 
-        // Quantum Shake - randomly shuffles particle positions visually
-        document.getElementById('shake-btn').onclick = () => {
-            playSound('weave');
-            logBackendEvent('Quantum fluctuation detected! Recalibrating matrix...', 'text-violet-400');
-            const matrix = document.getElementById('particle-matrix');
-            const particleElements = Array.from(matrix.children);
-            particleElements.sort(() => Math.random() - 0.5);
-            matrix.innerHTML = '';
-            particleElements.forEach(el => {
-                el.style.animation = 'none';
-                setTimeout(() => el.style.animation = '', 10);
-                matrix.appendChild(el);
-            });
-        };
-
         // Initial Render
         renderUsers();
         renderParticles();
         updateTransferButtonState();
         updateNetworkStats();
-        updateLeaderboard();
         logBackendEvent(`QEL Network Observer online. Node ID: Weaver-7B.`);
 
         // Start weaving new particles periodically
         setInterval(weaveNewParticle, 8000);
-
-        // Update network hash periodically for dynamic effect
-        setInterval(updateNetworkStats, 2000);
 
     </script>
 </body>
